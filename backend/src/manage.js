@@ -4,8 +4,7 @@ import { parseKey } from './lib/data.js';
 import { verify } from './lib/sign.js';
 import { page } from './lib/http.js';
 
-// Links arrive as GET (shows a button) and the button POSTs. Mail clients' one-click
-// unsubscribe also POSTs. Scanners that only GET links change nothing.
+
 const method = (event) => event.requestContext?.http?.method;
 
 function read(event, action) {
