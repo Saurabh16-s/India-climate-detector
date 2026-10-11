@@ -1,0 +1,137 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Email alerts for the India Climate Risk Tracker
+
+Parameters:
+  SenderEmail:
+    Type: String
+    Description: Email address (verified in Amazon SES) that alerts are sent from
+  AllowedOrigin:
+    Type: String
+    Default: http://localhost:5173
+    Description: Website URL allowed to call the API (CORS), no trailing slash
+  LinkSecret:
+    Type: String
+    NoEcho: true
+    MinLength: 32
+    Description: Random string (32+ characters) used to sign confirm and unsubscribe links
+
+Globals:
+  Function:
+    Runtime: nodejs24.x
+    Architectures: [arm64]
+    MemorySize: 256
+    Timeout: 15
+    Environment:
+      Variables:
+        TABLE_SUBSCRIBERS: !Ref SubscribersTable
+        TABLE_ALERTS: !Ref AlertStateTable
+        SENDER_EMAIL: !Ref SenderEmail
+        LINK_SECRET: !Ref LinkSecret
+
+Resources:
+  SubscribersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - { AttributeName: district, AttributeType: S }
+        - { AttributeName: email, AttributeType: S }
+      KeySchema:
+        - { AttributeName: district, KeyType: HASH }
+        - { AttributeName: email, KeyType: RANGE }
+      TimeToLiveSpecification:
+        AttributeName: expiresAt
+        Enabled: true
+
+  AlertStateTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - { AttributeName: district, AttributeType: S }
+      KeySchema:
+        - { AttributeName: district, KeyType: HASH }
+
+  Api:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      CorsConfiguration:
+        AllowOrigins: [!Ref AllowedOrigin]
+        AllowMethods: [POST, OPTIONS]
+        AllowHeaders: [content-type]
+        MaxAge: 600
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 10
+        ThrottlingRateLimit: 5
+
+  SubscribeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: subscribe.handler
+      Policies:
+        - DynamoDBCrudPolicy: { TableName: !Ref SubscribersTable }
+        - Statement:
+            - Effect: Allow
+              Action: ses:SendEmail
+              Resource: !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/*
+      Events:
+        Subscribe:
+          Type: HttpApi
+          Properties: { ApiId: !Ref Api, Path: /subscribe, Method: POST }
+
+  ConfirmFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: manage.confirm
+      Policies:
+        - DynamoDBCrudPolicy: { TableName: !Ref SubscribersTable }
+      Events:
+        Show:
+          Type: HttpApi
+          Properties: { ApiId: !Ref Api, Path: /confirm, Method: GET }
+        Do:
+          Type: HttpApi
+          Properties: { ApiId: !Ref Api, Path: /confirm, Method: POST }
+
+  UnsubscribeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: manage.unsubscribe
+      Policies:
+        - DynamoDBCrudPolicy: { TableName: !Ref SubscribersTable }
+      Events:
+        Show:
+          Type: HttpApi
+          Properties: { ApiId: !Ref Api, Path: /unsubscribe, Method: GET }
+        Do:
+          Type: HttpApi
+          Properties: { ApiId: !Ref Api, Path: /unsubscribe, Method: POST }
+
+  CheckAlertsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: checkAlerts.handler
+      Timeout: 300
+      Policies:
+        - DynamoDBReadPolicy: { TableName: !Ref SubscribersTable }
+        - DynamoDBCrudPolicy: { TableName: !Ref AlertStateTable }
+        - Statement:
+            - Effect: Allow
+              Action: ses:SendEmail
+              Resource: !Sub arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/*
+      Events:
+        Daily:
+          Type: ScheduleV2
+          Properties:
+            ScheduleExpression: cron(0 7 * * ? *)
+            ScheduleExpressionTimezone: Asia/Kolkata
+
+Outputs:
+  ApiUrl:
+    Description: Put this in the React app's .env as VITE_API_URL
+    Value: !Sub https://${Api}.execute-api.${AWS::Region}.${AWS::URLSuffix}
