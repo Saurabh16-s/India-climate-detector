@@ -9,7 +9,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const RESEND_AFTER_MS = 10 * 60 * 1000;
 const PENDING_TTL_SECONDS = 48 * 3600;
 
-// POST /subscribe  { state, district, email }
+
 export const handler = async (event) => {
   let body;
   try {
@@ -26,7 +26,7 @@ export const handler = async (event) => {
   const dist = findDistrict(body.state, body.district);
   if (!dist) return json(400, { message: 'Unknown district.' });
 
-  // Same answer in every case, so the form can't be used to probe who is subscribed.
+
   const ok = json(200, {
     message: 'Check your inbox for a confirmation email. Alerts start once you confirm.',
   });
@@ -50,7 +50,7 @@ export const handler = async (event) => {
         status: 'pending',
         apiBase,
         createdAt: now,
-        expiresAt: Math.floor(now / 1000) + PENDING_TTL_SECONDS, // DynamoDB TTL clears unconfirmed rows
+        expiresAt: Math.floor(now / 1000) + PENDING_TTL_SECONDS, 
       },
     })
   );
