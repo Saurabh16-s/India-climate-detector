@@ -7,8 +7,7 @@ import { buildAlert } from './lib/message.js';
 import { link } from './lib/sign.js';
 import { sendEmail } from './lib/email.js';
 
-// Confirmed subscribers grouped by district key. A Scan is fine for a small list;
-// add a status index if this grows to many thousands of subscribers.
+
 async function loadSubscribers() {
   const byDistrict = new Map();
   let ExclusiveStartKey;
@@ -31,7 +30,7 @@ async function loadSubscribers() {
   return byDistrict;
 }
 
-// Runs once a day (EventBridge Scheduler).
+
 export const handler = async () => {
   const summary = [];
   const byDistrict = await loadSubscribers();
@@ -70,7 +69,7 @@ export const handler = async () => {
       }
       summary.push({ district: key, level: result.level, sent });
     } catch (err) {
-      console.error(`Check failed for ${key}`, err); // one bad district must not stop the rest
+      console.error(`Check failed for ${key}`, err); 
     }
   }
   console.log(JSON.stringify({ checked: byDistrict.size, alerts: summary }));
