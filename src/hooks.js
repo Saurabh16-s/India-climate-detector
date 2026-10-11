@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { HOME } from './constants';
 
-// Tracks an element's rendered size.
+
 export function useElementSize(ref) {
   const [size, setSize] = useState({ w: 0, h: 0 });
   useEffect(() => {
@@ -19,7 +19,6 @@ export function useElementSize(ref) {
   return size;
 }
 
-// Animates the SVG viewBox to the selected state (or back to all of India).
 export function useViewBox(cur, svgRef, pathRefs) {
   const [vb, setVb] = useState(HOME);
   const vbRef = useRef(HOME);
