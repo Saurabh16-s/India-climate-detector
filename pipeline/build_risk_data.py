@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+
 """
 Build district-level flood and drought risk data for the India Climate Risk Tracker.
 
@@ -29,12 +29,12 @@ DFO_URL = ("https://services1.arcgis.com/AXaYBvnJsB5Q7sDF/ArcGIS/rest/services/"
            "Global_Archive_of_large_flood_events/FeatureServer/0/query")
 NASA = "https://power.larc.nasa.gov/api/temporal/monthly/point"
 
-Y0, Y1 = 2005, 2025            # years shown on the slider and chart
-BASE0, BASE1 = 2005, 2020      # rainfall period used (and baseline for drought z-scores)
-W_DRY, W_ARID = 0.6, 0.4       # drought index: rainfall shortfall vs. chronic dryness
+Y0, Y1 = 2005, 2025          
+BASE0, BASE1 = 2005, 2020      
+W_DRY, W_ARID = 0.6, 0.4       
 DATA = "data"
 
-# River behind the floods (kept from the front end). Add more as you verify them.
+
 RIVER = {
     "Dhemaji": "Jiadhal, Brahmaputra", "Lakhimpur": "Subansiri, Ranganadi", "Barpeta": "Beki, Manas, Pagladiya",
     "Morigaon": "Brahmaputra, Kopili", "Dhubri": "Brahmaputra", "Nalbari": "Pagladiya, Brahmaputra",
@@ -50,8 +50,8 @@ def log(*a):
     print(*a, file=sys.stderr, flush=True)
 
 
-# ---------------------------------------------------------------- districts
-ALL_STATES = ["Assam", "Bihar", "Maharashtra", "Rajasthan"]  # keep this order: cache files are numbered by position
+
+ALL_STATES = ["Assam", "Bihar", "Maharashtra", "Rajasthan"] 
 
 
 def load_districts(states):
@@ -79,7 +79,7 @@ def load_districts(states):
     return out
 
 
-# ---------------------------------------------------------------- floods
+
 def pick(props, *names, default=None):
     low = {k.lower(): v for k, v in props.items()}
     for n in names:
@@ -162,7 +162,7 @@ def flood_table(districts, dfo_feats, ifi_path):
             add(int(i), ym[0], dead, disp, 1.0 / len(hits))
             seen.add((int(i), ym[0], ym[1]))
 
-    if ifi_path:  # columns: year, [month], lat, lon, [deaths], [affected]
+    if ifi_path:  
         df = pd.read_csv(ifi_path)
         df.columns = [c.lower() for c in df.columns]
         for _, r in df.iterrows():
@@ -173,12 +173,12 @@ def flood_table(districts, dfo_feats, ifi_path):
             for i in hits:
                 m = int(r["month"]) if "month" in df.columns and not pd.isna(r.get("month")) else None
                 if (int(i), y, m) in seen or (m is None and any(k[:2] == (int(i), y) for k in seen)):
-                    continue  # already covered by a DFO event
+                    continue  
                 add(int(i), y, float(r.get("deaths", 0) or 0), float(r.get("affected", 0) or 0), 1.0)
     return tab
 
 
-# ---------------------------------------------------------------- rainfall
+
 def fetch_nasa(lat, lon):
     """Monthly mean precipitation (mm/day) from NASA POWER. Small request, no key needed."""
     params = {"parameters": "PRECTOTCORR", "community": "AG", "longitude": round(lon, 3),
@@ -200,16 +200,16 @@ def fetch_nasa(lat, lon):
 
 def totals_from_raw(raw):
     """returns ({year: monsoon mm}, {year: annual mm}) from either cache format"""
-    if "time" in raw:  # daily file saved earlier from Open-Meteo
+    if "time" in raw: 
         df = pd.DataFrame({"t": pd.to_datetime(raw["time"]), "pr": raw["pr"]}).dropna()
         df["y"], df["m"] = df.t.dt.year, df.t.dt.month
         return df[df.m.between(6, 9)].groupby("y").pr.sum().to_dict(), df.groupby("y").pr.sum().to_dict()
     mons, ann = {}, {}
-    for k, v in raw["monthly"].items():  # keys look like 200107; month 13 is POWER's annual value
+    for k, v in raw["monthly"].items(): 
         y, m = int(k[:4]), int(k[4:])
         if m == 13 or v is None or v < 0:
             continue
-        mm = v * calendar.monthrange(y, m)[1]  # mm/day -> mm in the month
+        mm = v * calendar.monthrange(y, m)[1] 
         ann[y] = ann.get(y, 0) + mm
         if 6 <= m <= 9:
             mons[y] = mons.get(y, 0) + mm
@@ -236,7 +236,7 @@ def rain_stats(idx, d):
     return {"z": {y: (v - mu) / sd for y, v in mons.items()}, "annual": float(np.mean(annb))}
 
 
-# ---------------------------------------------------------------- scoring
+
 def pct_rank(vals):
     s = pd.Series(vals)
     return (s.rank(pct=True) * 100).tolist()
