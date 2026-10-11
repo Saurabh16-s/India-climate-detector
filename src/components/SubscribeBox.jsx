@@ -8,7 +8,7 @@ const WHAT = {
 
 export default function SubscribeBox({ state, district, hazard }) {
   const [email, setEmail] = useState('');
-  const [status, setStatus] = useState('idle'); // idle | sending | done | error
+  const [status, setStatus] = useState('idle');
   const [msg, setMsg] = useState('');
 
   const onSubmit = async (e) => {
