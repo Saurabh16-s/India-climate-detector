@@ -10,7 +10,6 @@ export default function MapView({
   const zoom = !!cur;
   const isAct = (o) => !!sel && sel.s === o.s && sel.i === o.i;
 
-  // Draw the selected district last so it sits on top
   const dots = [...list].sort((a, b) => isAct(a) - isAct(b));
 
   const stateRivers = cur ? RIVERS.S[cur] || [] : [];
