@@ -8,9 +8,9 @@ import Panel from './components/Panel';
 import Note from './components/Note';
 
 export default function App() {
-  const [cur, setCur] = useState(null);      // selected state, null = all India
-  const [filt, setFilt] = useState('All');   // All | Flood | Drought
-  const [sel, setSel] = useState(null);      // { s: state, i: district index }
+  const [cur, setCur] = useState(null);      
+  const [filt, setFilt] = useState('All');  
+  const [sel, setSel] = useState(null);     
   const [year, setYear] = useState(YMAX);
   const [playing, setPlaying] = useState(false);
 
@@ -40,7 +40,7 @@ export default function App() {
     setSel(v.length ? { s: v[0].s, i: v[0].i } : null);
   };
 
-  // Autoplay through the years
+
   useEffect(() => {
     if (!playing) return;
     if (year >= YMAX) {
